@@ -1,0 +1,274 @@
+[
+  {
+    "id": "ERR-001",
+    "date": "2026-05-23",
+    "title": "誤判 Build 來源導致改錯目標",
+    "scene": "S0HA 14 軸人形手臂支援，排查 dgvKinematicsMCS_Cartesian AxisNum 顯示錯誤",
+    "bad_behavior": [
+      "截圖 title bar 顯示應用程式名稱為「RoboticsSuite」",
+      "發現 AcontisLib\\Robot\\GroupEvent.cs 仍有舊的硬編碼",
+      "誤以為 Build 來源是 AcontisLib\\Robot\\，準備對它動手"
+    ],
+    "fact": [
+      "PLC+ROBOT 的 cpcStudio 不論來自 \\Robot 或 AcontisLib\\Robot，Build 出來皆命名為 RoboticsSuite",
+      "本專案的目標始終是 D:\\LEO_Coding_Work\\WPF\\cpcStudio\\Robot\\",
+      "應以目標路徑確認來源，不可用應用程式名稱反推"
+    ],
+    "root_cause": [
+      "看到「RoboticsSuite」不代表 Build 來源是 AcontisLib\\Robot\\",
+      "確認目標前未先問使用者或查 .sln 路徑，憑第一印象自行推斷"
+    ],
+    "correct_action": [
+      "以目標路徑確認來源，不要用應用程式名稱反推",
+      "確認目標前先問使用者或查 .sln 路徑"
+    ],
+    "teaching_point": "AI 容易憑應用程式名稱盲目猜測 Build 來源，盲信可能改錯整個專案。",
+    "severity": "high",
+    "tags": ["路徑混淆", "Build來源", "過度自信"]
+  },
+  {
+    "id": "ERR-002",
+    "date": "2026-06-08",
+    "title": "PostBuild 建議未考慮後遺症",
+    "scene": "Acontis Layer2 OEM 升級，整理移植工作項目",
+    "bad_behavior": [
+      "提議在 CPC_PLCEditor.csproj 加入 PostBuild xcopy 指令自動同步 Tools\\EcEngineer\\，並直接列為執行步驟"
+    ],
+    "fact": [
+      "其他開發者沒有該資料夾時 PostBuild 會中斷整個 Build",
+      "bin\\Debug\\Tools\\ 類資料夾不受 VS Clean 清除，手動放入後持續存在",
+      "授權二進位檔不適合放入版控"
+    ],
+    "root_cause": [
+      "AI 只看到「自動同步」的好處，未主動評估環境不一致的後遺症"
+    ],
+    "correct_action": [
+      "提出涉及 Build 流程的建議時，應先主動列出其他開發者環境不一致時會發生什麼",
+      "本案正確結論：跳過 PostBuild，改寫部署說明文件"
+    ],
+    "teaching_point": "AI 只看到目標效果，沒有主動評估副作用。",
+    "severity": "medium",
+    "tags": ["Build流程", "環境副作用", "思慮不周"]
+  },
+  {
+    "id": "ERR-003",
+    "date": "2026-06-08",
+    "title": "過早下結論「行不通」",
+    "scene": "使用者問 EtherCATSuite.exe 掃描後、cpcStudio 能否透過 RAS 拿回結果",
+    "bad_behavior": [
+      "AI 根據過去一次測試紀錄（SCANONLY 靜默失敗）推斷「scan 結果是 per-session，session 關閉後消失」，直接回答「行不通」"
+    ],
+    "fact": [
+      "真正失敗原因是控制器與 cpcStudio 的 SDK 版本不同，與 per-session 無關",
+      "換控制器後 Initialize 成功",
+      "EC-Master 一直自己維護 slave 清單，任何 RAS client 連上來都能讀到"
+    ],
+    "root_cause": [
+      "AI 把過去測試失敗的原因不加驗證地套用到當前情境，在根本原因未確認前就否定了使用者的構想"
+    ],
+    "correct_action": [
+      "應回答：這個方向理論上有可能，但需要先確認 SDK 版本是否一致，再做驗證",
+      "在條件未完整確認前，不應對使用者的假設下否定結論"
+    ],
+    "teaching_point": "AI 用過去經驗套現在情境，過早收斂，阻礙了使用者的正確排查方向。",
+    "severity": "critical",
+    "tags": ["過早否定", "假經驗套用", "阻礙排查"]
+  },
+  {
+    "id": "ERR-004",
+    "date": "2026-06-08",
+    "title": "診斷 BtnMasterInitialize 失敗時忽略環境因素",
+    "scene": "cpcStudio 新專案按 BtnMasterInitialize 出現「Initialize fail」",
+    "bad_behavior": [
+      "AI 從程式碼邏輯分析，判斷是「關卡 1（HTTP CheckLsStatus）失敗」，推測原因是新專案沒有部署 Runtime 到控制器"
+    ],
+    "fact": [
+      "真正原因是控制器與 cpcStudio SDK 版本不同，與 Runtime 是否部署無關"
+    ],
+    "root_cause": [
+      "AI 習慣從程式碼邏輯找原因，忽略了「環境版本不符」這類在程式碼以外的因素"
+    ],
+    "correct_action": [
+      "連線類錯誤的排查順序：環境版本 → 網路 → 程式碼邏輯。不可跳過前兩步"
+    ],
+    "teaching_point": "AI 擅長程式碼邏輯分析，但環境因素需要人來確認，AI 容易忽略。",
+    "severity": "high",
+    "tags": ["環境因素", "SDK版本", "程式碼盲區"]
+  },
+  {
+    "id": "ERR-005",
+    "date": "2026-06-09",
+    "title": "將單機 AlarmLog 重複記錄誤描述為「多 Channel 同時觸發」",
+    "scene": "TASA Issue #6 UI 斷線問題，分析 AlarmLog 中 HMI_5 Alive timeout 出現多筆的原因",
+    "bad_behavior": [
+      "AI 看到同一個 HMI_5 Alive timeout 項目在短時間內記錄多筆，描述為「多 Channel 同時中斷」"
+    ],
+    "fact": [
+      "AlarmLog 是單一電腦的記錄，不存在多 Channel",
+      "多筆記錄的原因是 AlarmLog 每秒掃一輪狀態，只要斷線 alarm 持續就每秒寫一筆",
+      "筆數代表斷線持續秒數，不代表有多條連線"
+    ],
+    "root_cause": [
+      "未先確認 Log 的產生機制（邊緣觸發 vs. 持續記錄），憑直覺解讀重複記錄"
+    ],
+    "correct_action": [
+      "看到同一 alarm 項目重複出現，應先確認 Log 的產生機制，再判斷重複的意義"
+    ],
+    "teaching_point": "AI 對 Log 的產生機制不熟悉時，容易用直覺解讀重複記錄。",
+    "severity": "medium",
+    "tags": ["Log誤讀", "直覺猜測", "數據分析"]
+  },
+  {
+    "id": "ERR-006",
+    "date": "2026-06-09",
+    "title": "未查程式碼就推論 HeartBeat 計數器在重連時不歸零",
+    "scene": "TASA Issue #6，解釋重連後短時間又斷的原因",
+    "bad_behavior": [
+      "AI 推論「HeartBeat 計數器在重連時沒有歸零，帶著舊的失敗計數繼續跑」，並在文件中標注「無法推算（計數器帶入）」"
+    ],
+    "fact": [
+      "查閱 HeartBeatCmds.cs 與 PlcConnect_Events.cs 後確認：resetLinkStatus() 在斷線與重連時都會被呼叫並將 LostAliveSignalCnt 歸零",
+      "計數器確實在每次重連時歸零，不存在帶入舊計數的情況"
+    ],
+    "root_cause": [
+      "未先閱讀程式碼，直接用「看起來合理」的推論填補資料空缺"
+    ],
+    "correct_action": [
+      "對程式行為有疑問時，先查程式碼確認，再下結論。推論可以作為假設提出，不應直接寫入文件"
+    ],
+    "teaching_point": "AI 的「合理推論」不等於事實，涉及程式行為的判斷必須以程式碼為準。",
+    "severity": "critical",
+    "tags": ["幻覺推論", "未查Code", "腦補事實"]
+  },
+  {
+    "id": "ERR-007",
+    "date": "2026-06-10",
+    "title": "誤判 SDK 降版目標版本號",
+    "scene": "Issue #5 分析，查詢 Acontis SDK 從 V4.1.1 降版的目標版本",
+    "bad_behavior": [
+      "AI 在分析報告中寫「目前 DLL 已退回 V3.8.2」，並以 commit 703fdd64 的訊息「退回 SDK 3.8」作為依據"
+    ],
+    "fact": [
+      "查閱 git log 中 DLL 檔案的實際 Revert 對象，正確版本為 V3.9.7，而非 V3.8.2"
+    ],
+    "root_cause": [
+      "直接採信 commit 訊息的文字描述，未查閱 Revert 所指向的實際 commit 及 DLL 異動紀錄"
+    ],
+    "correct_action": [
+      "版本號應以 git show --stat <commit> 確認 DLL 的實際異動對象，不可僅憑 commit 訊息文字推斷"
+    ],
+    "teaching_point": "Commit 訊息是人寫的，可能不精確；版本號需以實際檔案異動為準。",
+    "severity": "medium",
+    "tags": ["Git分析", "文字陷阱", "版本誤判"]
+  },
+  {
+    "id": "ERR-008",
+    "date": "2026-06-12",
+    "title": "給了程式路徑卻用記憶推斷機型",
+    "scene": "Robot_HMI 作業區域限制功能恢復，診斷模擬模式死當與 Drive1 Error 問題",
+    "bad_behavior": [
+      "AI 在分析死當原因時，描述為「物理引擎 + S0HA 14 軸複雜模型 + 碰撞訊號持續觸發」"
+    ],
+    "fact": [
+      "查閱 MainWindow.xaml.cs 的 SetSimulatorInfo()，程式只有 S0 與 DB0 兩種機型，完全沒有 S0HA 或 14 軸的程式碼"
+    ],
+    "root_cause": [
+      "使用者已給定程式路徑，AI 卻沒有先查程式碼確認機型，直接從記憶提取其他專案（cpcStudio S0HA）的內容套用進來"
+    ],
+    "correct_action": [
+      "使用者給了程式路徑，就必須看程式碼回答，不可用記憶或推斷替代"
+    ],
+    "teaching_point": "給了路徑就查程式，記憶只能作為搜尋方向，不能作為答案來源。",
+    "severity": "high",
+    "tags": ["記憶混淆", "跨專案幻覺", "未看Code"]
+  },
+  {
+    "id": "ERR-009",
+    "date": "2026-07-06",
+    "title": "已被告知是迴歸問題卻沒立即用 diff 比對排查",
+    "scene": "Robot Layer2 專案 tvProject 點 I/O -> Configuration 後樹狀圖收合（Gitea Issue #795）",
+    "bad_behavior": [
+      "使用者早期已說明「Robot 參考程式沒問題，Robot-Layer2 近期提交才出現」，AI 卻沒第一時間 diff 兩份程式碼，而是猜測 SetNodeExpandedState 收尾、誤判 UI 執行緒阻塞、深挖 WPF 內部狀態機繞了多輪"
+    ],
+    "fact": [
+      "Robot 參考版本在同樣情境下完全不做任何事，移除 Layer2 額外重綁邏輯即解決"
+    ],
+    "root_cause": [
+      "急著用框架內部知識去解釋症狀成因，無視了使用者提供的「對照組沒問題」最強線索"
+    ],
+    "correct_action": [
+      "使用者說「舊版本沒問題、新版本才出現」時，應立即進行 git diff 比對兩版行為差異"
+    ],
+    "teaching_point": "使用者主動提供的「新舊版本行為差異」是最強線索，應優先順著做 diff-based 最小修復。",
+    "severity": "critical",
+    "tags": ["迴歸問題", "無視線索", "繞遠路除錯"]
+  },
+  {
+    "id": "ERR-010",
+    "date": "2026-07-23",
+    "title": "RocketMetrixMonitor 系統手冊：AI 全自動生成文件大量杜撰",
+    "scene": "逐章核對 RocketMetrixMonitor 系統手冊 12 章內容是否與實際程式碼相符",
+    "bad_behavior": [
+      "另一個 AI 全自動產生 70+ 個檔案的完整手冊，看似極度專業",
+      "第 1-3 章與 9-12 章幾乎全數杜撰：虛構 MDF4Reader、SQL Server 歷史庫、Role RBAC、SHA-256 雜湊、NLog 框架（套件庫根本沒有）"
+    ],
+    "fact": [
+      "手冊看起來結構極度完整專業，但原始碼內完全找不到任何對應類別"
+    ],
+    "root_cause": [
+      "AI 在缺乏即時驗證下，全自動大膽杜撰技術細節與架構"
+    ],
+    "correct_action": [
+      "對「AI 全自動生成、結構完整專業」的文件要提高警覺，必須逐項對照程式碼驗證"
+    ],
+    "teaching_point": "完整度和正確性是兩回事！AI 排版越工整，越容易包裝謊言與杜撰。",
+    "severity": "critical",
+    "tags": ["全自動幻覺", "文件杜撰", "盲信陷阱"]
+  },
+  {
+    "id": "ERR-011",
+    "date": "2026-07-28",
+    "title": "又一次搞錯 Build/程式碼目標路徑",
+    "scene": "S0HA 14 軸人形手臂，修復「新增 WCS 時 Mechanic 頁面 MCS2 空白」bug，同步修改多個路徑",
+    "bad_behavior": [
+      "一開始搜尋到 AcontisLib\\Robot - Layer2，就把這個路徑當成唯一的作業分支，完全沒往上層 cpcStudio 目錄檢查",
+      "使用者最早給了 D:\\...\\cpcStudio\\Robot，AI 沒看沒記，導致改錯資料夾（該改的沒改到，不該改的全改了）"
+    ],
+    "fact": [
+      "cpcStudio 底下同時存在 Robot (L ROBOT)、AcontisLib\\Robot、AcontisLib\\Robot-Layer2 三個獨立 git 工作目錄",
+      "三者均屬於這次 S0HA 要同步的範圍"
+    ],
+    "root_cause": [
+      "沒有先完整列出使用者提到過的所有路徑，憑第一個搜尋到的路徑建立心智模型，一路套用"
+    ],
+    "correct_action": [
+      "使用者訊息裡出現的每一個路徑都要照抄記錄，動手前列出所有候選路徑與 branch 核對"
+    ],
+    "teaching_point": "同一類路徑搞混錯誤第二次發生！動手前必須強制核對所有路徑清單。",
+    "severity": "critical",
+    "tags": ["重複犯錯", "路徑混淆", "分支混淆"]
+  },
+  {
+    "id": "ERR-012",
+    "date": "2026-08-04",
+    "title": "只查 Gitea 留言就下結論「尚未處理」，沒有查 git log 實際 commit",
+    "scene": "使用者要求確認 Acontis Layer2 整合案 Issue #814/#818/#819 的處理狀態",
+    "bad_behavior": [
+      "只呼叫 Gitea API 查 Issue 內容與留言串，看到 #818 無留言即回報「尚未處理」",
+      "被使用者糾正：「你要看提交啦！怎麼只看留言」"
+    ],
+    "fact": [
+      "git log 一查發現 #818 早已在 8e6518b55 commit 修復並 push，working tree clean",
+      "使用者的工作流程是先 commit/push，Gitea 留言與關閉是額外非即時動作"
+    ],
+    "root_cause": [
+      "把外部協作工具的討論串狀態直接當成程式碼實際進度，捨近求遠不查權威來源 git"
+    ],
+    "correct_action": [
+      "確認功能是否完成應優先查 git log 核對是否有對應 commit，Gitea 留言只能輔助"
+    ],
+    "teaching_point": "程式碼異動的權威來源是 git，不是任何外部協作工具的討論串狀態！",
+    "severity": "high",
+    "tags": ["Git日誌", "協作工具陷阱", "捨近求遠"]
+  }
+]
